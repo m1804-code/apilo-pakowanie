@@ -2,13 +2,26 @@
 
 ## 0A — Fakturownia: odczyt produktu i zestawu
 
-1. Wybierz 1 zwykły produkt i 1 istniejący zestaw w Fakturowni.
-2. Wykonaj `GET /products.json` (pojedynczy odczyt) dla obu.
-3. Zapisz **zanonimizowaną** odpowiedź: zostaw pola
-   `code, size, size_width, size_height, weight, weight_unit, package,
-   package_products_details`, usuń ceny/klientów/tokeny.
-4. Dopisz: czy wymiary to gabaryt **opakowania** (do 3D) czy samego produktu.
-5. Wynik: TAK (bierzemy Fakturownię jako źródło) / NIE + które pola wracają do Sheets.
+**Stan po weryfikacji docs (13.10.2026, github.com/fakturownia/API, sekcja Produkty):**
+
+Potwierdzone w dokumentacji (nie trzeba sprawdzać):
+- `GET /products.json?api_token=..&per_page=100&page=N` (+`date_from`, +`warehouse_id`),
+  `GET /products/ID.json`.
+- Pola: `code`, `size`, `size_width`, `size_height`, `size_unit` (m/cm),
+  `weight`, `weight_unit` (kg/g), `package` (1/0).
+- Zestaw tworzy się przez `package: true` + `package_products_details: {"0": {quantity, id}}`
+  (składniki po **wewnętrznym id**, nie po SKU — proxy samo mapuje id→code).
+
+Do sprawdzenia NA ŻYWO (docs nie pokazują przykładu odpowiedzi GET):
+1. Czy odczyt zestawu (`package: 1`) zwraca `package_products_details` i w jakim
+   kształcie (obiekt jak przy zapisie, czy tablica, jakie klucze).
+2. Czy wymiary `size/size_width/size_height` to gabaryt **opakowania** (do 3D),
+   czy samego produktu.
+3. Wystarczy 1 zwykły produkt + 1 zestaw, odpowiedź **zanonimizowana**
+   (usunąć ceny/klientów/token; zostawić pola z listy powyżej).
+
+Wynik: działa (źródło = Fakturownia, proxy już w `apps-script/Code.gs`) /
+nie działa (składy lub pola wracają do zakładek arkusza — tylko luki, nie cała baza).
 
 ## 0B — Apilo: konwersja produktu na zestaw
 
