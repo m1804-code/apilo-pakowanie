@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Apilo Pakowanie — schemat arkusza (v5.1)",
+  "description": "Trzy zakładki. Jednostki: cm (D1), waga: kg. null = nieznane (NIE zero).",
+  "tabs": {
+    "Produkty": {
+      "columns": ["sku", "dl_cm", "szer_cm", "wys_cm", "waga_kg", "uwagi"],
+      "rules": [
+        "sku unikalne (case-insensitive), niepuste",
+        "wymiary > 0; wartosc > 150 = alarm o podejrzeniu mm (ostrzezenie, nie blad)",
+        "waga_kg puste = null = nieznana -> 'Niezweryfikowana waga przesylki'",
+        "0 w waga_kg tylko jako swiadomy wpis"
+      ]
+    },
+    "Zestawy": {
+      "format": "jeden wiersz na skladnik",
+      "columns": ["sku_zestawu", "sku_skladnika", "ilosc"],
+      "rules": [
+        "ilosc = dodatnia liczba calkowita",
+        "sku_skladnika musi istniec w Produkty",
+        "zestaw bez wierszy = blad (pusta definicja)",
+        "cykle (zestaw zawiera sam siebie posrednio/bezposrednio) = blad",
+        "UWAGA DOCELOWA: po pozytywnym tescie 0A sklady ida z Fakturowni, ta zakladka zostaje tylko na luki"
+      ]
+    },
+    "Kartony": {
+      "columns": ["nazwa", "dl_wew", "szer_wew", "wys_wew", "dl_zew", "szer_zew", "wys_zew", "waga_kartonu_kg", "max_kg", "aktywny"],
+      "rules": [
+        "wew = przestrzen na produkty (canFitInBox3D), zew = gabaryt przewoznika (InPost)",
+        "migracja startowa: wew = zew z kodu v14.5, wagi puste (null), aktywny = 1",
+        "wymiary > 0; min. 1 karton aktywny",
+        "limit InPost A/B/C = 25 kg (niezaleznie od max_kg kartonu)"
+      ]
+    }
+  }
+}
