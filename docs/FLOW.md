@@ -3,12 +3,26 @@
 ## 1. Bartek dodaje ofertę na platformę
 Poza skryptem. Bez zmian.
 
-## 2. Auto-import ofert co ~30 min + powiadomienie po ~15 min
-**Status: do weryfikacji (test 0C).** Docs Apilo mówią o ręcznym re-imporcie ofert
-wystawionych bezpośrednio na platformach — nie zakładamy, że import działa sam.
-- Jeśli 0C potwierdzi auto-import → w fazie B banner w skrypcie pokaże oferty
-  bez relacji (przy wejściu do Apilo; push bez serwera nie istnieje — decyzja: brak serwera).
-- Jeśli nie → do instrukcji zespołu dopisujemy ręczny import jako krok obowiązkowy.
+## 2. Import ofert + powiadomienie
+**Status: ROZSTRZYGNIĘTE 13.10.2026 — auto-importu ofert NIE MA (test 0C zamknięty docs).**
+- Apilo **nie wykrywa** nowych ofert wystawionych bezpośrednio na platformach
+  („Apilo nie pobiera informacji czy w platformie sprzedaży pojawiły się nowe
+  oferty. Wyjątkiem jest wystawianie ofert z panelu Apilo” — pomoc Apilo).
+  Po wystawieniu na platformie trzeba kliknąć ponowny import:
+  Towary i usługi > Relacje Produktów > Importuj (Import ofert: Tak).
+  Status: Administracja > Zadania.
+- Co synchronizuje się SAMO (cyklicznie): zamówienia (~5 min), stany/ceny
+  (standard co 2–4h zależnie od pakietu; płatnie co 1h / 10 min / real-time).
+  Podgląd: Administracja > Synchronizacja danych.
+- Warianty dla zespołu (do wyboru):
+  A. Bartek wystawia oferty Z POZIOMU Apilo (Sprzedaż → manager platformy)
+     → wpadają same, import zbędny. **Rekomendowane.**
+  B. Bartek wystawia na platformie i od razu klika Import w Relacjach (2 min)
+     → krok 1 i import w jednej ręce, zespół nie czeka.
+  C. Import robi zespół przed łączeniem (filtr Czy powiązano: Nie pokaże braki).
+- Powiadomienie „po 15 min”: brak natywnego mechanizmu. Opcje: Bartek daje znać
+  na czacie/mailu (zero techniki) albo banner w skrypcie fazy B (tylko przy
+  wejściu do Apilo — push bez serwera nie istnieje).
 
 ## 3. Zespół dodaje SKU do Fakturowni
 - Produkt podstawowy → waga + wymiary w Fakturowni.
