@@ -18,9 +18,10 @@ Konfiguracja > kafelek Fakturowni > Edytuj > ‘Platforma nadrzędna’ = Tak,
 następnie ‘Konfiguruj’ przy ‘Import produktów’ i przy ‘Aktualizacji bazy
 towarów’. Terminy: Administracja > Zadania.
 - Wymiary do skryptu: proxy z Fakturowni — GOTOWE (czeka na URL /exec).
-- **Waga Apilo←Fakturownia: NIEPOTWIERDZONE.** Docs mówią tylko o zasilaniu
-  „ilość/cena”; waga występuje jedynie w imporcie CSV („aktualizacja pełna”).
-  Nie zakładamy, że waga przechodzi synciem.
+- **Waga Apilo←Fakturownia: POTWIERDZONA testem na żywo (13.10.2026).**
+  Apilo importuje wagę z Fakturowni i samo mnoży ją w zestawach ze składowych
+  — dokładnie ta sama zasada co `mgExpandToBase` + `mgShipmentWeight` w skrypcie.
+  Oba systemy liczą z jednego źródła, więc nie rozjadą się.
 - Auto „Zmień produkt na zestaw”: FAZA B po teście 0B (endpoint konwersji).
   Do tego czasu ręcznie.
 
@@ -30,13 +31,13 @@ OK. Uwaga z docs (Krok III importu): po imporcie sprawdzić duplikaty
 łączyć oferty z produktami zasilanymi przez Fakturownię (filtr Magazyn).
 Faza B: banner wskaże niepowiązane.
 
-## 6. Zmiany: wymiary w Fakturowni, waga w Apilo — ODRZUCONE, decyzja:
-**Jedno źródło prawdy dla wagi i wymiarów = Fakturownia.** Uzasadnienie:
-- Skrypt czyta wagę WYŁĄCZNIE z Fakturowni (proxy). Waga wpisana w Apilo
-  byłaby dla skryptu niewidzialna → rozjazd i fałszywe „Niezweryfikowana”.
-- Skoro niepotwierdzone jest nawet czy Apilo importuje wagę (krok 4),
-  edycja wagi w Apilo może być nadpisywana synciem albo ignorowana —
-  obie opcje złe.
-- Wyjątek: jeśli kurier/etykieta wymaga wagi w karcie Apilo, to osobny
-  obowiązek formalny, nie źródło dla skryptu. Ewentualny automat
-  wpisujący wagę do Apilo to faza B (po 0B), nie ręczna edycja.
+## 6. Zmiany wymiarów i wagi — JEDNO ŹRÓDŁO: Fakturownia (skorygowane 13.10.2026)
+Pierwotna propozycja podziału (wymiary w Fakturowni, waga w Apilo) jest
+nieaktualna po Twoim teście na żywo: skoro Apilo importuje wagę z Fakturowni
+i samo przelicza ją w zestawach, edycja wagi w Apilo byłaby nadpisywana
+synciem albo ignorowana przez skrypt (czyta wagę wyłącznie z Fakturowni).
+- Zmiana wymiaru lub wagi → **zawsze w Fakturowni**.
+- Apilo dociąga wagę synciem i mnoży w zestawach sam (przetestowane przez Ciebie).
+- Skrypt dociąga wagę przez proxy i mnoży w zestawach sam (pokryte testami).
+- Jeśli kurier wymaga wagi w karcie Apilo formalnie, Apilo ma ją z syncu —
+  nic nie trzeba przepisywać ręcznie.
