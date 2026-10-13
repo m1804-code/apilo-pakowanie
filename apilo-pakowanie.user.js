@@ -615,6 +615,26 @@
         return null;
     }
 
+    // Krok 3 flow: rozwija SKU na skladowe bazowe. Zestaw NIE potrzebuje wlasnej
+    // wagi/wymiarow — waga i objetosc licza sie ze skladowych.
+    // Zwraca 1 (znane, skonsumowane), 0 (zestaw z nieznanymi skladowymi,
+    // skonsumowane) lub -1 (nieznany kod — zostawic w komentarzu).
+    function mgExpandToBase(code, qty, skuCounts) {
+        if (bundleDefinitions[code]) {
+            let known = true;
+            let bItems = bundleDefinitions[code];
+            for (let bSku in bItems) {
+                if (!productDims[bSku]) known = false;
+                skuCounts[bSku] = (skuCounts[bSku] || 0) + (bItems[bSku] * qty);
+            }
+            return known ? 1 : 0;
+        } else if (productDims[code]) {
+            skuCounts[code] = (skuCounts[code] || 0) + qty;
+            return 1;
+        }
+        return -1;
+    }
+
     function parseCommentAndGetItems(label) {
         let row = label.closest('tr[data-role="shipment-preferences"]');
         let commentInput = row ? row.querySelector('input[name*="[comment]"]') : document.querySelector('input[name*="[comment]"]');
@@ -638,20 +658,13 @@
             let qty = qtyStr ? parseInt(qtyStr, 10) : 1;
             let code = codeMatch.toUpperCase();
 
-            if (bundleDefinitions[code]) {
-                let bItems = bundleDefinitions[code];
-                for (let bSku in bItems) {
-                    if (!productDims[bSku]) hasUnknownProduct = true;
-                    skuCounts[bSku] = (skuCounts[bSku] || 0) + (bItems[bSku] * qty);
-                }
-                return '';
-            } else if (productDims[code]) {
-                skuCounts[code] = (skuCounts[code] || 0) + qty;
-                return '';
-            } else {
+            let expanded = mgExpandToBase(code, qty, skuCounts);
+            if (expanded === -1) {
                 hasUnknownProduct = true;
                 return match;
             }
+            if (expanded === 0) hasUnknownProduct = true;
+            return '';
         });
 
         remainingText = remainingText.replace(/^[;, ]+|[;, ]+$/g, '').replace(/[;,]{2,}/g, ';').trim();
@@ -984,6 +997,7 @@
         weight: mgShipmentWeight,
         hash: mgStateHash,
         condense: findOptimalCondensation,
+        expand: mgExpandToBase,
         getMaps: function () {
             return { dims: productDims, bundles: bundleDefinitions, boxes: customBoxes, weights: productWeights, meta: boxMeta, dataVersion: mgDataVersion };
         }

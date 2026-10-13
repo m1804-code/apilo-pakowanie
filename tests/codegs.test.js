@@ -84,20 +84,25 @@ out = JSON.parse(doGet().getText());
 assert.deepStrictEqual(out.bundles, [{ zestaw: 'Z1', skladnik: 'A1', ilosc: 2 }], 'fallback zestawow');
 assert(out.warnings.some((w) => w.includes('Sklady')), 'warning o skladach');
 
-// 5. Szum z zywej bazy: kind=buy, deleted, pusty code odpadaja; mm->cm
+// 5. Szum z zywej bazy: kind=buy, deleted, pusty code odpadaja; mm->cm;
+//    zestaw bez wymiarow/wagi przechodzi z nullami (krok 3 flow)
 apiPages = {
   1: [
     { id: 21, kind: 'sell', code: 'OK1', size: '25.0', size_width: '20.0', size_height: '10.0', size_unit: 'mm', weight: '2.0', weight_unit: 'kg' },
     { id: 22, kind: 'buy', code: 'USLUGA', size: '1', size_width: '1', size_height: '1' },
     { id: 23, kind: 'sell', code: 'DEL1', size: '1', size_width: '1', size_height: '1', deleted: true },
     { id: 24, kind: 'sell', code: '', size: '1', size_width: '1', size_height: '1' },
-    { id: 25, kind: 'sell', code: null, size: '1', size_width: '1', size_height: '1' }
+    { id: 25, kind: 'sell', code: null, size: '1', size_width: '1', size_height: '1' },
+    { id: 26, kind: 'sell', code: 'ZB', package: '1', package_products_details: { 0: { quantity: 1, id: 21 } } }
   ]
 };
 tabs.Produkty = P([]);
 out = JSON.parse(doGet().getText());
-assert.strictEqual(out.products.length, 1, 'tylko OK1');
+assert.strictEqual(out.products.length, 2, 'OK1 + ZB (bez wymiarow)');
 assert.deepStrictEqual([out.products[0].dl, out.products[0].waga], [2.5, 2.0], 'mm->cm: 25mm=2.5cm');
+const zb = out.products.find((p) => p.sku === 'ZB');
+assert.deepStrictEqual([zb.dl, zb.szer, zb.wys, zb.waga], [null, null, null, null], 'zestaw bez wymiarow = nulle');
+assert.deepStrictEqual(out.bundles, [{ zestaw: 'ZB', skladnik: 'OK1', ilosc: 1 }], 'sklad zestawu po id');
 
 // 4. Blad HTTP Fakturowni -> czysty fallback, bez wyjatku na zewnatrz
 apiCode = 500;

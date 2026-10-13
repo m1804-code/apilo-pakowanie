@@ -103,4 +103,29 @@ const h3 = T.hash([{ sku: 'A1', qty: 1 }], false, 'M');
 assert.notStrictEqual(h1, h2, 'hash rozroznia sklad');
 assert.strictEqual(h1, h3, 'hash stabilny');
 
+// krok 3 flow: zestaw BEZ wlasnych wymiarow/wagi przechodzi walidator...
+const nullDims = { ...good, products: [...good.products, { sku: 'Z9', dl: null, szer: null, wys: null, waga: null }] };
+assert.strictEqual(T.validate(nullDims).ok, true, 'produkt/zestaw bez wymiarow przechodzi');
+
+// ...a jego waga liczy sie ze skladowych
+T.apply({
+  version: 't2',
+  products: [
+    { sku: 'A1', dl: 6.5, szer: 8, wys: 23, waga: 0.2 },
+    { sku: 'B2', dl: 4.5, szer: 8.5, wys: 13.5, waga: 0.3 }
+  ],
+  bundles: [{ zestaw: 'Z1', skladnik: 'A1', ilosc: 2 }, { zestaw: 'Z1', skladnik: 'B2', ilosc: 1 }],
+  boxes: [{ nazwa: 'M', dl_wew: 30, szer_wew: 20, wys_wew: 10, dl_zew: 31, szer_zew: 21, wys_zew: 11, waga: null, max_kg: 10, aktywny: true }]
+}, 't2');
+const counts = {};
+assert.strictEqual(T.expand('Z1', 1, counts), 1, 'ekspansja znanego zestawu');
+assert.deepStrictEqual(counts, { A1: 2, B2: 1 });
+const wsum = T.weight(Object.keys(counts).map((k) => ({ sku: k, qty: counts[k] })), null);
+assert.deepStrictEqual([wsum.unknown, wsum.total], [false, 0.7], 'waga zestawu ze skladowych: 2*0.2+0.3');
+assert.strictEqual(T.expand('XXX', 1, {}), -1, 'nieznany kod');
+T.apply({ version: 't3', products: [{ sku: 'A1', dl: 1, szer: 1, wys: 1, waga: 0.1 }],
+  bundles: [{ zestaw: 'ZX', skladnik: 'NOPE', ilosc: 1 }],
+  boxes: [{ nazwa: 'M', dl_wew: 30, szer_wew: 20, wys_wew: 10, dl_zew: null, szer_zew: null, wys_zew: null, waga: null, max_kg: null, aktywny: true }] }, 't3');
+assert.strictEqual(T.expand('ZX', 1, {}), 0, 'zestaw z nieznanym skladnikiem');
+
 console.log('OK: wszystkie testy walidatora przeszly (' + (cases.length + 4) + ' asercji grup).');
