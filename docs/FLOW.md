@@ -1,43 +1,42 @@
-# Flow zespołu (5 kroków) — status automatyzacji na 13.10.2026
+# Flow zespołu v2 (6 kroków) — status na 13.10.2026
 
-## 1. Bartek dodaje ofertę na platformę
-Poza skryptem. Bez zmian.
+## 1. Bartek dodaje ofertę na platformie i informuje zespół
+OK bez zmian. (Wariant B: informacja na czacie/mailu; brak natywnego powiadomienia.)
 
-## 2. Import ofert + powiadomienie
-**Status: ROZSTRZYGNIĘTE 13.10.2026 — auto-importu ofert NIE MA (test 0C zamknięty docs).**
-- Apilo **nie wykrywa** nowych ofert wystawionych bezpośrednio na platformach
-  („Apilo nie pobiera informacji czy w platformie sprzedaży pojawiły się nowe
-  oferty. Wyjątkiem jest wystawianie ofert z panelu Apilo” — pomoc Apilo).
-  Po wystawieniu na platformie trzeba kliknąć ponowny import:
-  Towary i usługi > Relacje Produktów > Importuj (Import ofert: Tak).
-  Status: Administracja > Zadania.
-- Co synchronizuje się SAMO (cyklicznie): zamówienia (~5 min), stany/ceny
-  (standard co 2–4h zależnie od pakietu; płatnie co 1h / 10 min / real-time).
-  Podgląd: Administracja > Synchronizacja danych.
-- Warianty dla zespołu (do wyboru):
-  A. Bartek wystawia oferty Z POZIOMU Apilo (Sprzedaż → manager platformy)
-     → wpadają same, import zbędny. **Rekomendowane.**
-  B. Bartek wystawia na platformie i od razu klika Import w Relacjach (2 min)
-     → krok 1 i import w jednej ręce, zespół nie czeka.
-  C. Import robi zespół przed łączeniem (filtr Czy powiązano: Nie pokaże braki).
-- Powiadomienie „po 15 min”: brak natywnego mechanizmu. Opcje: Bartek daje znać
-  na czacie/mailu (zero techniki) albo banner w skrypcie fazy B (tylko przy
-  wejściu do Apilo — push bez serwera nie istnieje).
+## 2. Zespół klika import ofert danej platformy w Apilo
+OK. Towary i usługi > Relacje Produktów > Importuj (Import ofert: Tak).
+Status: Administracja > Zadania. Auto-importu nowych ofert nie ma (0C).
 
-## 3. Zespół dodaje SKU do Fakturowni
-- Produkt podstawowy → waga + wymiary w Fakturowni.
-- Zestaw → BEZ wagi i wymiarów. **Skrypt liczy je ze składowych** (ekspansja
-  `mgExpandToBase`, waga = suma wag składowych; pokryte testami).
-- Proxy bierze produkty z Fakturowni, luki z arkusza; zestaw z nierozerwalnym
-  składem ląduje w fallbacku arkusza z warningiem (nie psuje bazy).
+## 3. Zespół dodaje SKU do Fakturowni (base: waga + wymiary; zestaw: bez)
+OK. Zestaw bez wymiarów/wagi przechodzi walidator; waga i objętość liczone
+ze składowych (`mgExpandToBase`, testy). Proxy mapuje `package_products_details`
+po id→code; nierozerwalny skład → fallback arkusza z warningiem.
 
-## 4. Import do Apilo (~1h) + automat skryptu
-**Status: faza B (wymaga testu 0B — endpoint konwersji).** Doprecyzowanie:
-- Waga „do pakowania” brana jest z Fakturowni przez proxy — działa od razu po
-  wdrożeniu, bez wpisywania czegokolwiek w Apilo.
-- Fizyczne wpisanie wagi do karty produktu w Apilo + „Zmień produkt na zestaw”
-  jednym klikiem to osobna automatyzacja (przycisk na karcie produktu).
-- Do tego czasu: konwersja zestawów ręcznie, reszta (dobór kartonu) działa.
+## 4. Cykliczny import Fakturownia → Apilo (~1h) + automat skryptu
+Konfiguracja po stronie Apilo (jednorazowo): Administracja > Księgowość
+Konfiguracja > kafelek Fakturowni > Edytuj > ‘Platforma nadrzędna’ = Tak,
+następnie ‘Konfiguruj’ przy ‘Import produktów’ i przy ‘Aktualizacji bazy
+towarów’. Terminy: Administracja > Zadania.
+- Wymiary do skryptu: proxy z Fakturowni — GOTOWE (czeka na URL /exec).
+- **Waga Apilo←Fakturownia: NIEPOTWIERDZONE.** Docs mówią tylko o zasilaniu
+  „ilość/cena”; waga występuje jedynie w imporcie CSV („aktualizacja pełna”).
+  Nie zakładamy, że waga przechodzi synciem.
+- Auto „Zmień produkt na zestaw”: FAZA B po teście 0B (endpoint konwersji).
+  Do tego czasu ręcznie.
 
-## 5. Ręczne łączenie oferty z produktem/zestawem w Apilo
-Bez zmian. W fazie B banner wskaże co niepowiązane (link do filtra Apilo).
+## 5. Zespół ręcznie łączy ofertę z produktem/zestawem w Apilo
+OK. Uwaga z docs (Krok III importu): po imporcie sprawdzić duplikaty
+(produkt z platformy vs produkt z Fakturowni) i usunąć nadmiarowe;
+łączyć oferty z produktami zasilanymi przez Fakturownię (filtr Magazyn).
+Faza B: banner wskaże niepowiązane.
+
+## 6. Zmiany: wymiary w Fakturowni, waga w Apilo — ODRZUCONE, decyzja:
+**Jedno źródło prawdy dla wagi i wymiarów = Fakturownia.** Uzasadnienie:
+- Skrypt czyta wagę WYŁĄCZNIE z Fakturowni (proxy). Waga wpisana w Apilo
+  byłaby dla skryptu niewidzialna → rozjazd i fałszywe „Niezweryfikowana”.
+- Skoro niepotwierdzone jest nawet czy Apilo importuje wagę (krok 4),
+  edycja wagi w Apilo może być nadpisywana synciem albo ignorowana —
+  obie opcje złe.
+- Wyjątek: jeśli kurier/etykieta wymaga wagi w karcie Apilo, to osobny
+  obowiązek formalny, nie źródło dla skryptu. Ewentualny automat
+  wpisujący wagę do Apilo to faza B (po 0B), nie ręczna edycja.
