@@ -53,7 +53,10 @@ function intOrNull(v) {
 function toCm(v, unit) {
   var n = numOrNull(v);
   if (n === null) return null;
-  return (String(unit || 'cm').toLowerCase() === 'm') ? n * 100 : n;
+  var u = String(unit || 'cm').toLowerCase();
+  if (u === 'm') return n * 100;
+  if (u === 'mm') return n / 10; // 0A-live: prawdziwe dane uzywaja mm (docs mowia m/cm)
+  return n;
 }
 
 function toKg(v, unit) {
@@ -127,13 +130,19 @@ function fetchFakturowniaProducts() {
 
   var idToCode = {};
   all.forEach(function (p) {
-    if (p && p.id !== undefined && p.code)
+    if (p && p.id !== undefined && p.code && !p.deleted
+        && (p.kind === undefined || p.kind === null || String(p.kind) === 'sell'))
       idToCode[p.id] = String(p.code).trim().toUpperCase();
   });
 
-  var products = [], bundles = [], bundlesComplete = true;
+  var products = [], bundles = [], bundlesComplete = true, warnings = [];
   all.forEach(function (p) {
     if (!p) return;
+    if (p.deleted) return; // usuniete pomijamy
+    // 0A-live: baza zawiera mase pozycji kind=buy (uslugi, etykiety kurierskie
+    // z danymi odbiorcow) oraz produkty bez code — do pakowania bierzemy tylko
+    // sprzedazowe z kodem; luki uzupelnia arkusz (ostrzezenie w warnings).
+    if (p.kind !== undefined && p.kind !== null && String(p.kind) !== 'sell') return;
     var sku = String(p.code || '').trim().toUpperCase();
     if (!sku) return;
     products.push({
@@ -145,11 +154,15 @@ function fetchFakturowniaProducts() {
     });
     if (String(p.package) === '1' || p.package === true) {
       var rows = parseBundleDetails(p.package_products_details, idToCode);
-      if (!rows.length) { bundlesComplete = false; return; }
+      if (!rows.length) {
+        bundlesComplete = false;
+        warnings.push('Zestaw bez rozpoznanego skladu w Fakturowni: ' + sku);
+        return;
+      }
       rows.forEach(function (r) { bundles.push({ zestaw: sku, skladnik: r.skladnik, ilosc: r.ilosc }); });
     }
   });
-  return { products: products, bundles: bundles, bundlesComplete: bundlesComplete };
+  return { products: products, bundles: bundles, bundlesComplete: bundlesComplete, warnings: warnings };
 }
 
 function readTab(name) {
@@ -225,6 +238,7 @@ function buildPayload() {
       });
       if (f.bundlesComplete) { bundles = f.bundles; }
       else { bundles = sBundles; warnings.push('Sklady zestawow z arkusza (Fakturownia nie zwrocila kompletu)'); }
+      (f.warnings || []).forEach(function (w) { warnings.push(w); });
     }
   } catch (e) {
     warnings.push('Fakturownia niedostepna (' + String(e && e.message || e) + ') — dane z arkusza');

@@ -57,8 +57,8 @@ assert.strictEqual(out.boxes.length, 1);
 props = { FAKTUROWNIA_DOMAIN: 'demo', FAKTUROWNIA_TOKEN: 'sekret-nie-widoczny-w-tescie' };
 apiPages = {
   1: [
-    { id: 11, code: 'a1', size: '0.065', size_width: '0.08', size_height: '0.23', size_unit: 'm', weight: '200', weight_unit: 'g' },
-    { id: 12, code: 'Z1', size: '10', size_width: '10', size_height: '10', size_unit: 'cm', weight: '0.5', weight_unit: 'kg', package: '1',
+    { id: 11, kind: 'sell', code: 'a1', size: '0.065', size_width: '0.08', size_height: '0.23', size_unit: 'm', weight: '200', weight_unit: 'g' },
+    { id: 12, kind: 'sell', code: 'Z1', size: '10', size_width: '10', size_height: '10', size_unit: 'cm', weight: '0.5', weight_unit: 'kg', package: '1',
       package_products_details: { 0: { quantity: 2, id: 11 } } }
   ]
 };
@@ -78,11 +78,26 @@ assert(out.products.some((p) => p.sku === 'EXTRA'), 'brak z arkusza');
 assert(out.warnings.some((w) => w.includes('EXTRA')), 'warning o luce');
 
 // 3. Zestaw bez skladu w GET -> bundles z arkusza + warning
-apiPages = { 1: [{ id: 12, code: 'Z1', size: '1', size_width: '1', size_height: '1', package: '1' }] };
+apiPages = { 1: [{ id: 12, kind: 'sell', code: 'Z1', size: '1', size_width: '1', size_height: '1', package: '1' }] };
 tabs.Zestawy = B([['Z1', 'A1', 2]]);
 out = JSON.parse(doGet().getText());
 assert.deepStrictEqual(out.bundles, [{ zestaw: 'Z1', skladnik: 'A1', ilosc: 2 }], 'fallback zestawow');
 assert(out.warnings.some((w) => w.includes('Sklady')), 'warning o skladach');
+
+// 5. Szum z zywej bazy: kind=buy, deleted, pusty code odpadaja; mm->cm
+apiPages = {
+  1: [
+    { id: 21, kind: 'sell', code: 'OK1', size: '25.0', size_width: '20.0', size_height: '10.0', size_unit: 'mm', weight: '2.0', weight_unit: 'kg' },
+    { id: 22, kind: 'buy', code: 'USLUGA', size: '1', size_width: '1', size_height: '1' },
+    { id: 23, kind: 'sell', code: 'DEL1', size: '1', size_width: '1', size_height: '1', deleted: true },
+    { id: 24, kind: 'sell', code: '', size: '1', size_width: '1', size_height: '1' },
+    { id: 25, kind: 'sell', code: null, size: '1', size_width: '1', size_height: '1' }
+  ]
+};
+tabs.Produkty = P([]);
+out = JSON.parse(doGet().getText());
+assert.strictEqual(out.products.length, 1, 'tylko OK1');
+assert.deepStrictEqual([out.products[0].dl, out.products[0].waga], [2.5, 2.0], 'mm->cm: 25mm=2.5cm');
 
 // 4. Blad HTTP Fakturowni -> czysty fallback, bez wyjatku na zewnatrz
 apiCode = 500;
